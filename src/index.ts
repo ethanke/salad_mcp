@@ -7,7 +7,17 @@ import {
   ListToolsRequestSchema,
   Tool,
 } from '@modelcontextprotocol/sdk/types.js';
-import { SaladClient, ContainerGroup, Queue } from './salad-client.js';
+import {
+  SaladClient,
+  ContainerGroup,
+  Queue,
+  ContainerGroupInstance,
+  QueueJob,
+  InferenceEndpointJob,
+  GpuClass,
+  WebhookSecretKey,
+  LogEntry,
+} from './salad-client.js';
 import { z } from 'zod';
 
 const SALAD_API_KEY = process.env.SALAD_API_KEY;
@@ -323,6 +333,530 @@ const TOOLS: Tool[] = [
       required: ['organization_name'],
     },
   },
+  {
+    name: 'get_system_logs',
+    description:
+      'Get system logs for a container group. Returns logs from container group system events.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        organization_name: {
+          type: 'string',
+          description: 'The organization name',
+        },
+        project_name: {
+          type: 'string',
+          description: 'The project name',
+        },
+        container_group_name: {
+          type: 'string',
+          description: 'The container group name',
+        },
+      },
+      required: ['organization_name', 'project_name', 'container_group_name'],
+    },
+  },
+  {
+    name: 'list_container_group_instances',
+    description:
+      'List all instances of a container group. Instances represent individual running containers within a group.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        organization_name: {
+          type: 'string',
+          description: 'The organization name',
+        },
+        project_name: {
+          type: 'string',
+          description: 'The project name',
+        },
+        container_group_name: {
+          type: 'string',
+          description: 'The container group name',
+        },
+      },
+      required: ['organization_name', 'project_name', 'container_group_name'],
+    },
+  },
+  {
+    name: 'get_container_group_instance',
+    description:
+      'Get detailed information about a specific container group instance.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        organization_name: {
+          type: 'string',
+          description: 'The organization name',
+        },
+        project_name: {
+          type: 'string',
+          description: 'The project name',
+        },
+        container_group_name: {
+          type: 'string',
+          description: 'The container group name',
+        },
+        instance_id: {
+          type: 'string',
+          description: 'The instance ID',
+        },
+      },
+      required: [
+        'organization_name',
+        'project_name',
+        'container_group_name',
+        'instance_id',
+      ],
+    },
+  },
+  {
+    name: 'update_container_group_instance',
+    description:
+      'Update a container group instance. Can be used to modify instance settings like deletion cost.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        organization_name: {
+          type: 'string',
+          description: 'The organization name',
+        },
+        project_name: {
+          type: 'string',
+          description: 'The project name',
+        },
+        container_group_name: {
+          type: 'string',
+          description: 'The container group name',
+        },
+        instance_id: {
+          type: 'string',
+          description: 'The instance ID',
+        },
+        updates: {
+          type: 'object',
+          description: 'The fields to update',
+        },
+      },
+      required: [
+        'organization_name',
+        'project_name',
+        'container_group_name',
+        'instance_id',
+        'updates',
+      ],
+    },
+  },
+  {
+    name: 'reallocate_container_group_instance',
+    description:
+      'Reallocate a container group instance to a different machine.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        organization_name: {
+          type: 'string',
+          description: 'The organization name',
+        },
+        project_name: {
+          type: 'string',
+          description: 'The project name',
+        },
+        container_group_name: {
+          type: 'string',
+          description: 'The container group name',
+        },
+        instance_id: {
+          type: 'string',
+          description: 'The instance ID',
+        },
+      },
+      required: [
+        'organization_name',
+        'project_name',
+        'container_group_name',
+        'instance_id',
+      ],
+    },
+  },
+  {
+    name: 'recreate_container_group_instance',
+    description:
+      'Recreate a container group instance on the same machine.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        organization_name: {
+          type: 'string',
+          description: 'The organization name',
+        },
+        project_name: {
+          type: 'string',
+          description: 'The project name',
+        },
+        container_group_name: {
+          type: 'string',
+          description: 'The container group name',
+        },
+        instance_id: {
+          type: 'string',
+          description: 'The instance ID',
+        },
+      },
+      required: [
+        'organization_name',
+        'project_name',
+        'container_group_name',
+        'instance_id',
+      ],
+    },
+  },
+  {
+    name: 'restart_container_group_instance',
+    description: 'Restart a container group instance.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        organization_name: {
+          type: 'string',
+          description: 'The organization name',
+        },
+        project_name: {
+          type: 'string',
+          description: 'The project name',
+        },
+        container_group_name: {
+          type: 'string',
+          description: 'The container group name',
+        },
+        instance_id: {
+          type: 'string',
+          description: 'The instance ID',
+        },
+      },
+      required: [
+        'organization_name',
+        'project_name',
+        'container_group_name',
+        'instance_id',
+      ],
+    },
+  },
+  {
+    name: 'update_queue',
+    description: 'Update a message queue configuration.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        organization_name: {
+          type: 'string',
+          description: 'The organization name',
+        },
+        project_name: {
+          type: 'string',
+          description: 'The project name',
+        },
+        queue_name: {
+          type: 'string',
+          description: 'The queue name',
+        },
+        updates: {
+          type: 'object',
+          description: 'The fields to update',
+        },
+      },
+      required: ['organization_name', 'project_name', 'queue_name', 'updates'],
+    },
+  },
+  {
+    name: 'list_queue_jobs',
+    description: 'List all jobs in a message queue.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        organization_name: {
+          type: 'string',
+          description: 'The organization name',
+        },
+        project_name: {
+          type: 'string',
+          description: 'The project name',
+        },
+        queue_name: {
+          type: 'string',
+          description: 'The queue name',
+        },
+      },
+      required: ['organization_name', 'project_name', 'queue_name'],
+    },
+  },
+  {
+    name: 'create_queue_job',
+    description: 'Create a new job in a message queue.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        organization_name: {
+          type: 'string',
+          description: 'The organization name',
+        },
+        project_name: {
+          type: 'string',
+          description: 'The project name',
+        },
+        queue_name: {
+          type: 'string',
+          description: 'The queue name',
+        },
+        job: {
+          type: 'object',
+          description: 'The job data including input and optional metadata',
+        },
+      },
+      required: ['organization_name', 'project_name', 'queue_name', 'job'],
+    },
+  },
+  {
+    name: 'get_queue_job',
+    description: 'Get detailed information about a specific queue job.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        organization_name: {
+          type: 'string',
+          description: 'The organization name',
+        },
+        project_name: {
+          type: 'string',
+          description: 'The project name',
+        },
+        queue_name: {
+          type: 'string',
+          description: 'The queue name',
+        },
+        job_id: {
+          type: 'string',
+          description: 'The job ID',
+        },
+      },
+      required: ['organization_name', 'project_name', 'queue_name', 'job_id'],
+    },
+  },
+  {
+    name: 'delete_queue_job',
+    description: 'Delete a job from a message queue.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        organization_name: {
+          type: 'string',
+          description: 'The organization name',
+        },
+        project_name: {
+          type: 'string',
+          description: 'The project name',
+        },
+        queue_name: {
+          type: 'string',
+          description: 'The queue name',
+        },
+        job_id: {
+          type: 'string',
+          description: 'The job ID',
+        },
+      },
+      required: ['organization_name', 'project_name', 'queue_name', 'job_id'],
+    },
+  },
+  {
+    name: 'list_inference_endpoint_jobs',
+    description: 'List all jobs for a specific inference endpoint.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        organization_name: {
+          type: 'string',
+          description: 'The organization name',
+        },
+        inference_endpoint_name: {
+          type: 'string',
+          description: 'The inference endpoint name',
+        },
+      },
+      required: ['organization_name', 'inference_endpoint_name'],
+    },
+  },
+  {
+    name: 'create_inference_endpoint_job',
+    description: 'Create a new inference job for an endpoint.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        organization_name: {
+          type: 'string',
+          description: 'The organization name',
+        },
+        inference_endpoint_name: {
+          type: 'string',
+          description: 'The inference endpoint name',
+        },
+        job: {
+          type: 'object',
+          description: 'The job data including input and optional metadata',
+        },
+      },
+      required: ['organization_name', 'inference_endpoint_name', 'job'],
+    },
+  },
+  {
+    name: 'get_inference_endpoint_job',
+    description: 'Get detailed information about a specific inference job.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        organization_name: {
+          type: 'string',
+          description: 'The organization name',
+        },
+        inference_endpoint_name: {
+          type: 'string',
+          description: 'The inference endpoint name',
+        },
+        job_id: {
+          type: 'string',
+          description: 'The job ID',
+        },
+      },
+      required: ['organization_name', 'inference_endpoint_name', 'job_id'],
+    },
+  },
+  {
+    name: 'delete_inference_endpoint_job',
+    description: 'Delete an inference job.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        organization_name: {
+          type: 'string',
+          description: 'The organization name',
+        },
+        inference_endpoint_name: {
+          type: 'string',
+          description: 'The inference endpoint name',
+        },
+        job_id: {
+          type: 'string',
+          description: 'The job ID',
+        },
+      },
+      required: ['organization_name', 'inference_endpoint_name', 'job_id'],
+    },
+  },
+  {
+    name: 'list_gpu_classes',
+    description:
+      'List all available GPU classes for an organization. GPU classes define the types of GPUs available for container groups.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        organization_name: {
+          type: 'string',
+          description: 'The organization name',
+        },
+      },
+      required: ['organization_name'],
+    },
+  },
+  {
+    name: 'get_webhook_secret_key',
+    description:
+      'Get the webhook secret key for an organization. Used to verify webhook payloads.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        organization_name: {
+          type: 'string',
+          description: 'The organization name',
+        },
+      },
+      required: ['organization_name'],
+    },
+  },
+  {
+    name: 'update_webhook_secret_key',
+    description:
+      'Regenerate the webhook secret key for an organization.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        organization_name: {
+          type: 'string',
+          description: 'The organization name',
+        },
+      },
+      required: ['organization_name'],
+    },
+  },
+  {
+    name: 'query_log_entries',
+    description:
+      'Query log entries for container groups and instances. Filter by time range, container group, instance, and log level.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        organization_name: {
+          type: 'string',
+          description: 'The organization name',
+        },
+        query: {
+          type: 'object',
+          description:
+            'Query parameters including container_group_name, instance_id, start_time, end_time, level, and limit',
+        },
+      },
+      required: ['organization_name', 'query'],
+    },
+  },
+  {
+    name: 'get_cpu_availability',
+    description:
+      'Get CPU availability information for an organization. Returns available CPU resources.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        organization_name: {
+          type: 'string',
+          description: 'The organization name',
+        },
+        request: {
+          type: 'object',
+          description: 'Optional availability request parameters',
+        },
+      },
+      required: ['organization_name'],
+    },
+  },
+  {
+    name: 'get_gpu_availability',
+    description:
+      'Get GPU availability information for an organization. Returns available GPU resources by class.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        organization_name: {
+          type: 'string',
+          description: 'The organization name',
+        },
+        request: {
+          type: 'object',
+          description:
+            'Optional availability request parameters including gpu_classes and quantity',
+        },
+      },
+      required: ['organization_name'],
+    },
+  },
 ];
 
 // Create server
@@ -568,6 +1102,365 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       case 'get_quotas': {
         const result = await saladClient.getQuotas(
           args.organization_name as string
+        );
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(result, null, 2),
+            },
+          ],
+        };
+      }
+
+      case 'get_system_logs': {
+        const result = await saladClient.getSystemLogs(
+          args.organization_name as string,
+          args.project_name as string,
+          args.container_group_name as string
+        );
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(result, null, 2),
+            },
+          ],
+        };
+      }
+
+      case 'list_container_group_instances': {
+        const result = await saladClient.listContainerGroupInstances(
+          args.organization_name as string,
+          args.project_name as string,
+          args.container_group_name as string
+        );
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(result, null, 2),
+            },
+          ],
+        };
+      }
+
+      case 'get_container_group_instance': {
+        const result = await saladClient.getContainerGroupInstance(
+          args.organization_name as string,
+          args.project_name as string,
+          args.container_group_name as string,
+          args.instance_id as string
+        );
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(result, null, 2),
+            },
+          ],
+        };
+      }
+
+      case 'update_container_group_instance': {
+        const result = await saladClient.updateContainerGroupInstance(
+          args.organization_name as string,
+          args.project_name as string,
+          args.container_group_name as string,
+          args.instance_id as string,
+          args.updates as Partial<ContainerGroupInstance>
+        );
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(result, null, 2),
+            },
+          ],
+        };
+      }
+
+      case 'reallocate_container_group_instance': {
+        await saladClient.reallocateContainerGroupInstance(
+          args.organization_name as string,
+          args.project_name as string,
+          args.container_group_name as string,
+          args.instance_id as string
+        );
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Container group instance ${args.instance_id} reallocated successfully`,
+            },
+          ],
+        };
+      }
+
+      case 'recreate_container_group_instance': {
+        await saladClient.recreateContainerGroupInstance(
+          args.organization_name as string,
+          args.project_name as string,
+          args.container_group_name as string,
+          args.instance_id as string
+        );
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Container group instance ${args.instance_id} recreated successfully`,
+            },
+          ],
+        };
+      }
+
+      case 'restart_container_group_instance': {
+        await saladClient.restartContainerGroupInstance(
+          args.organization_name as string,
+          args.project_name as string,
+          args.container_group_name as string,
+          args.instance_id as string
+        );
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Container group instance ${args.instance_id} restarted successfully`,
+            },
+          ],
+        };
+      }
+
+      case 'update_queue': {
+        const result = await saladClient.updateQueue(
+          args.organization_name as string,
+          args.project_name as string,
+          args.queue_name as string,
+          args.updates as Partial<Queue>
+        );
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(result, null, 2),
+            },
+          ],
+        };
+      }
+
+      case 'list_queue_jobs': {
+        const result = await saladClient.listQueueJobs(
+          args.organization_name as string,
+          args.project_name as string,
+          args.queue_name as string
+        );
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(result, null, 2),
+            },
+          ],
+        };
+      }
+
+      case 'create_queue_job': {
+        const result = await saladClient.createQueueJob(
+          args.organization_name as string,
+          args.project_name as string,
+          args.queue_name as string,
+          args.job as { input: unknown; metadata?: Record<string, unknown>; webhook?: string }
+        );
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(result, null, 2),
+            },
+          ],
+        };
+      }
+
+      case 'get_queue_job': {
+        const result = await saladClient.getQueueJob(
+          args.organization_name as string,
+          args.project_name as string,
+          args.queue_name as string,
+          args.job_id as string
+        );
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(result, null, 2),
+            },
+          ],
+        };
+      }
+
+      case 'delete_queue_job': {
+        await saladClient.deleteQueueJob(
+          args.organization_name as string,
+          args.project_name as string,
+          args.queue_name as string,
+          args.job_id as string
+        );
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Queue job ${args.job_id} deleted successfully`,
+            },
+          ],
+        };
+      }
+
+      case 'list_inference_endpoint_jobs': {
+        const result = await saladClient.listInferenceEndpointJobs(
+          args.organization_name as string,
+          args.inference_endpoint_name as string
+        );
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(result, null, 2),
+            },
+          ],
+        };
+      }
+
+      case 'create_inference_endpoint_job': {
+        const result = await saladClient.createInferenceEndpointJob(
+          args.organization_name as string,
+          args.inference_endpoint_name as string,
+          args.job as { input: unknown; metadata?: Record<string, unknown>; webhook?: string }
+        );
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(result, null, 2),
+            },
+          ],
+        };
+      }
+
+      case 'get_inference_endpoint_job': {
+        const result = await saladClient.getInferenceEndpointJob(
+          args.organization_name as string,
+          args.inference_endpoint_name as string,
+          args.job_id as string
+        );
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(result, null, 2),
+            },
+          ],
+        };
+      }
+
+      case 'delete_inference_endpoint_job': {
+        await saladClient.deleteInferenceEndpointJob(
+          args.organization_name as string,
+          args.inference_endpoint_name as string,
+          args.job_id as string
+        );
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Inference endpoint job ${args.job_id} deleted successfully`,
+            },
+          ],
+        };
+      }
+
+      case 'list_gpu_classes': {
+        const result = await saladClient.listGpuClasses(
+          args.organization_name as string
+        );
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(result, null, 2),
+            },
+          ],
+        };
+      }
+
+      case 'get_webhook_secret_key': {
+        const result = await saladClient.getWebhookSecretKey(
+          args.organization_name as string
+        );
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(result, null, 2),
+            },
+          ],
+        };
+      }
+
+      case 'update_webhook_secret_key': {
+        const result = await saladClient.updateWebhookSecretKey(
+          args.organization_name as string
+        );
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(result, null, 2),
+            },
+          ],
+        };
+      }
+
+      case 'query_log_entries': {
+        const result = await saladClient.queryLogEntries(
+          args.organization_name as string,
+          args.query as {
+            container_group_name?: string;
+            instance_id?: string;
+            start_time?: string;
+            end_time?: string;
+            level?: string;
+            limit?: number;
+          }
+        );
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(result, null, 2),
+            },
+          ],
+        };
+      }
+
+      case 'get_cpu_availability': {
+        const result = await saladClient.getCpuAvailability(
+          args.organization_name as string,
+          args.request as { gpu_classes?: string[]; quantity?: number } | undefined
+        );
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(result, null, 2),
+            },
+          ],
+        };
+      }
+
+      case 'get_gpu_availability': {
+        const result = await saladClient.getGpuAvailability(
+          args.organization_name as string,
+          args.request as { gpu_classes?: string[]; quantity?: number } | undefined
         );
         return {
           content: [
