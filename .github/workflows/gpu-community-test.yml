@@ -35,8 +35,8 @@ jobs:
         env:
           SALAD_API_KEY: ${{ secrets.SALAD_API_KEY }}
           CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
-          SALAD_TEST_ORG: ${{ secrets.SALAD_TEST_ORG || 'test-org' }}
-          SALAD_TEST_PROJECT: ${{ secrets.SALAD_TEST_PROJECT || 'test-project' }}
+          SALAD_TEST_ORG: ${{ secrets.SALAD_TEST_ORG != '' && secrets.SALAD_TEST_ORG || 'test-org' }}
+          SALAD_TEST_PROJECT: ${{ secrets.SALAD_TEST_PROJECT != '' && secrets.SALAD_TEST_PROJECT || 'test-project' }}
         run: npm run test:gpu
 
       - name: Upload test results
