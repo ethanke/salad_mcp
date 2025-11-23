@@ -131,6 +131,64 @@ export interface Quotas {
   max_container_group_instances?: number;
 }
 
+export interface ContainerGroupInstance {
+  id: string;
+  machine_id: string;
+  state: string;
+  version: number;
+  ready: boolean;
+  started_at?: string;
+  container_group_id?: string;
+}
+
+export interface QueueJob {
+  id: string;
+  input: unknown;
+  status?: string;
+  events?: unknown[];
+  create_time?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface InferenceEndpointJob {
+  id: string;
+  input: unknown;
+  status?: string;
+  events?: unknown[];
+  create_time?: string;
+  metadata?: Record<string, unknown>;
+  webhook?: string;
+}
+
+export interface GpuClass {
+  id: string;
+  name: string;
+  display_name?: string;
+  descriptions?: string[];
+  is_high_demand?: boolean;
+  prices?: {
+    priority?: string;
+  };
+}
+
+export interface WebhookSecretKey {
+  secret_key?: string;
+}
+
+export interface LogEntry {
+  timestamp: string;
+  level: string;
+  message: string;
+  container_group_name?: string;
+  instance_id?: string;
+  [key: string]: unknown;
+}
+
+export interface AvailabilityRequest {
+  gpu_classes?: string[];
+  quantity?: number;
+}
+
 export class SaladAPIError extends Error {
   constructor(
     message: string,
@@ -160,7 +218,7 @@ export class SaladClient {
       maxRedirects: 5,
       httpsAgent,
       proxy: false, // Disable axios default proxy, use httpsAgent instead
-      validateStatus: (status) => status >= 200 && status < 500, // Accept 4xx for better error handling
+      validateStatus: (status: number) => status >= 200 && status < 500, // Accept 4xx for better error handling
     });
   }
 
@@ -295,6 +353,116 @@ export class SaladClient {
     }
   }
 
+  async getSystemLogs(
+    organizationName: string,
+    projectName: string,
+    containerGroupName: string
+  ): Promise<string> {
+    try {
+      const response = await this.client.get(
+        `/organizations/${organizationName}/projects/${projectName}/containers/${containerGroupName}/system-logs`
+      );
+      return response.data;
+    } catch (error) {
+      return this.handleError(error);
+    }
+  }
+
+  // Container Group Instances
+  async listContainerGroupInstances(
+    organizationName: string,
+    projectName: string,
+    containerGroupName: string
+  ): Promise<{ items: ContainerGroupInstance[] }> {
+    try {
+      const response = await this.client.get(
+        `/organizations/${organizationName}/projects/${projectName}/containers/${containerGroupName}/instances`
+      );
+      return response.data;
+    } catch (error) {
+      return this.handleError(error);
+    }
+  }
+
+  async getContainerGroupInstance(
+    organizationName: string,
+    projectName: string,
+    containerGroupName: string,
+    instanceId: string
+  ): Promise<ContainerGroupInstance> {
+    try {
+      const response = await this.client.get(
+        `/organizations/${organizationName}/projects/${projectName}/containers/${containerGroupName}/instances/${instanceId}`
+      );
+      return response.data;
+    } catch (error) {
+      return this.handleError(error);
+    }
+  }
+
+  async updateContainerGroupInstance(
+    organizationName: string,
+    projectName: string,
+    containerGroupName: string,
+    instanceId: string,
+    updates: Partial<ContainerGroupInstance>
+  ): Promise<ContainerGroupInstance> {
+    try {
+      const response = await this.client.patch(
+        `/organizations/${organizationName}/projects/${projectName}/containers/${containerGroupName}/instances/${instanceId}`,
+        updates
+      );
+      return response.data;
+    } catch (error) {
+      return this.handleError(error);
+    }
+  }
+
+  async reallocateContainerGroupInstance(
+    organizationName: string,
+    projectName: string,
+    containerGroupName: string,
+    instanceId: string
+  ): Promise<void> {
+    try {
+      await this.client.post(
+        `/organizations/${organizationName}/projects/${projectName}/containers/${containerGroupName}/instances/${instanceId}/reallocate`
+      );
+    } catch (error) {
+      return this.handleError(error);
+    }
+  }
+
+  async recreateContainerGroupInstance(
+    organizationName: string,
+    projectName: string,
+    containerGroupName: string,
+    instanceId: string
+  ): Promise<void> {
+    try {
+      await this.client.post(
+        `/organizations/${organizationName}/projects/${projectName}/containers/${containerGroupName}/instances/${instanceId}/recreate`
+      );
+    } catch (error) {
+      return this.handleError(error);
+    }
+  }
+
+  async restartContainerGroupInstance(
+    organizationName: string,
+    projectName: string,
+    containerGroupName: string,
+    instanceId: string
+  ): Promise<void> {
+    try {
+      await this.client.post(
+        `/organizations/${organizationName}/projects/${projectName}/containers/${containerGroupName}/instances/${instanceId}/restart`
+      );
+    } catch (error) {
+      return this.handleError(error);
+    }
+  }
+
   // Inference Endpoints
   async listInferenceEndpoints(
     organizationName: string
@@ -318,6 +486,66 @@ export class SaladClient {
         `/organizations/${organizationName}/inference-endpoints/${inferenceEndpointName}`
       );
       return response.data;
+    } catch (error) {
+      return this.handleError(error);
+    }
+  }
+
+  // Inference Endpoint Jobs
+  async listInferenceEndpointJobs(
+    organizationName: string,
+    inferenceEndpointName: string
+  ): Promise<{ items: InferenceEndpointJob[] }> {
+    try {
+      const response = await this.client.get(
+        `/organizations/${organizationName}/inference-endpoints/${inferenceEndpointName}/jobs`
+      );
+      return response.data;
+    } catch (error) {
+      return this.handleError(error);
+    }
+  }
+
+  async createInferenceEndpointJob(
+    organizationName: string,
+    inferenceEndpointName: string,
+    job: { input: unknown; metadata?: Record<string, unknown>; webhook?: string }
+  ): Promise<InferenceEndpointJob> {
+    try {
+      const response = await this.client.post(
+        `/organizations/${organizationName}/inference-endpoints/${inferenceEndpointName}/jobs`,
+        job
+      );
+      return response.data;
+    } catch (error) {
+      return this.handleError(error);
+    }
+  }
+
+  async getInferenceEndpointJob(
+    organizationName: string,
+    inferenceEndpointName: string,
+    jobId: string
+  ): Promise<InferenceEndpointJob> {
+    try {
+      const response = await this.client.get(
+        `/organizations/${organizationName}/inference-endpoints/${inferenceEndpointName}/jobs/${jobId}`
+      );
+      return response.data;
+    } catch (error) {
+      return this.handleError(error);
+    }
+  }
+
+  async deleteInferenceEndpointJob(
+    organizationName: string,
+    inferenceEndpointName: string,
+    jobId: string
+  ): Promise<void> {
+    try {
+      await this.client.delete(
+        `/organizations/${organizationName}/inference-endpoints/${inferenceEndpointName}/jobs/${jobId}`
+      );
     } catch (error) {
       return this.handleError(error);
     }
@@ -369,6 +597,23 @@ export class SaladClient {
     }
   }
 
+  async updateQueue(
+    organizationName: string,
+    projectName: string,
+    queueName: string,
+    updates: Partial<Queue>
+  ): Promise<Queue> {
+    try {
+      const response = await this.client.patch(
+        `/organizations/${organizationName}/projects/${projectName}/queues/${queueName}`,
+        updates
+      );
+      return response.data;
+    } catch (error) {
+      return this.handleError(error);
+    }
+  }
+
   async deleteQueue(
     organizationName: string,
     projectName: string,
@@ -377,6 +622,70 @@ export class SaladClient {
     try {
       await this.client.delete(
         `/organizations/${organizationName}/projects/${projectName}/queues/${queueName}`
+      );
+    } catch (error) {
+      return this.handleError(error);
+    }
+  }
+
+  // Queue Jobs
+  async listQueueJobs(
+    organizationName: string,
+    projectName: string,
+    queueName: string
+  ): Promise<{ items: QueueJob[] }> {
+    try {
+      const response = await this.client.get(
+        `/organizations/${organizationName}/projects/${projectName}/queues/${queueName}/jobs`
+      );
+      return response.data;
+    } catch (error) {
+      return this.handleError(error);
+    }
+  }
+
+  async createQueueJob(
+    organizationName: string,
+    projectName: string,
+    queueName: string,
+    job: { input: unknown; metadata?: Record<string, unknown>; webhook?: string }
+  ): Promise<QueueJob> {
+    try {
+      const response = await this.client.post(
+        `/organizations/${organizationName}/projects/${projectName}/queues/${queueName}/jobs`,
+        job
+      );
+      return response.data;
+    } catch (error) {
+      return this.handleError(error);
+    }
+  }
+
+  async getQueueJob(
+    organizationName: string,
+    projectName: string,
+    queueName: string,
+    jobId: string
+  ): Promise<QueueJob> {
+    try {
+      const response = await this.client.get(
+        `/organizations/${organizationName}/projects/${projectName}/queues/${queueName}/jobs/${jobId}`
+      );
+      return response.data;
+    } catch (error) {
+      return this.handleError(error);
+    }
+  }
+
+  async deleteQueueJob(
+    organizationName: string,
+    projectName: string,
+    queueName: string,
+    jobId: string
+  ): Promise<void> {
+    try {
+      await this.client.delete(
+        `/organizations/${organizationName}/projects/${projectName}/queues/${queueName}/jobs/${jobId}`
       );
     } catch (error) {
       return this.handleError(error);
@@ -392,6 +701,101 @@ export class SaladClient {
       if (response.status >= 400) {
         return this.handleError(new Error('API Error'), response.data);
       }
+      return response.data;
+    } catch (error) {
+      return this.handleError(error);
+    }
+  }
+
+  // GPU Classes
+  async listGpuClasses(
+    organizationName: string
+  ): Promise<{ items: GpuClass[] }> {
+    try {
+      const response = await this.client.get(
+        `/organizations/${organizationName}/gpu-classes`
+      );
+      return response.data;
+    } catch (error) {
+      return this.handleError(error);
+    }
+  }
+
+  // Webhooks
+  async getWebhookSecretKey(
+    organizationName: string
+  ): Promise<WebhookSecretKey> {
+    try {
+      const response = await this.client.get(
+        `/organizations/${organizationName}/webhook-secret-key`
+      );
+      return response.data;
+    } catch (error) {
+      return this.handleError(error);
+    }
+  }
+
+  async updateWebhookSecretKey(
+    organizationName: string
+  ): Promise<WebhookSecretKey> {
+    try {
+      const response = await this.client.post(
+        `/organizations/${organizationName}/webhook-secret-key`
+      );
+      return response.data;
+    } catch (error) {
+      return this.handleError(error);
+    }
+  }
+
+  // Log Entries
+  async queryLogEntries(
+    organizationName: string,
+    query: {
+      container_group_name?: string;
+      instance_id?: string;
+      start_time?: string;
+      end_time?: string;
+      level?: string;
+      limit?: number;
+    }
+  ): Promise<{ items: LogEntry[] }> {
+    try {
+      const response = await this.client.post(
+        `/organizations/${organizationName}/log-entries`,
+        query
+      );
+      return response.data;
+    } catch (error) {
+      return this.handleError(error);
+    }
+  }
+
+  // Availability
+  async getCpuAvailability(
+    organizationName: string,
+    request?: AvailabilityRequest
+  ): Promise<unknown> {
+    try {
+      const response = await this.client.post(
+        `/organizations/${organizationName}/availability/sce-cpu-availability`,
+        request || {}
+      );
+      return response.data;
+    } catch (error) {
+      return this.handleError(error);
+    }
+  }
+
+  async getGpuAvailability(
+    organizationName: string,
+    request?: AvailabilityRequest
+  ): Promise<unknown> {
+    try {
+      const response = await this.client.post(
+        `/organizations/${organizationName}/availability/sce-gpu-availability`,
+        request || {}
+      );
       return response.data;
     } catch (error) {
       return this.handleError(error);
