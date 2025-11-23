@@ -902,10 +902,9 @@ class GPUCommunityTestRunner {
             const logs = await this.client.queryLogEntries(
               this.orgName,
               {
-                container_group_name: this.testContainerGroupName,
+                query: `container_group_name:"${this.testContainerGroupName}" severity:info`,
                 start_time: new Date(Date.now() - 3600000).toISOString(), // Last hour
-                end_time: new Date().toISOString(),
-                level: 'info'
+                end_time: new Date().toISOString()
               }
             );
             console.log(`  Retrieved log entries successfully`);
