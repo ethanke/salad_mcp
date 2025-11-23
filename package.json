@@ -12,7 +12,8 @@
     "dev": "tsc --watch",
     "start": "node dist/index.js",
     "eval": "node dist/eval-cli.js",
-    "test": "node dist/integration-test.js"
+    "test": "node dist/integration-test.js",
+    "test:gpu": "node dist/gpu-community-test.js"
   },
   "keywords": [
     "mcp",
