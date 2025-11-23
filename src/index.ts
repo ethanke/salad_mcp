@@ -17,6 +17,8 @@ import {
   GpuClass,
   WebhookSecretKey,
   LogEntry,
+  LogEntryQuery,
+  LogEntryCollection,
 } from './salad-client.js';
 import { z } from 'zod';
 
@@ -801,7 +803,7 @@ const TOOLS: Tool[] = [
   {
     name: 'query_log_entries',
     description:
-      'Query log entries for container groups and instances. Filter by time range, container group, instance, and log level.',
+      'Query log entries for an organization. Retrieve logs matching a query string within a specified time range. Supports pagination and sorting.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -811,8 +813,31 @@ const TOOLS: Tool[] = [
         },
         query: {
           type: 'object',
-          description:
-            'Query parameters including container_group_name, instance_id, start_time, end_time, level, and limit',
+          description: 'Log query object with query string, time range, and optional pagination/sorting parameters',
+          properties: {
+            query: {
+              type: 'string',
+              description: 'The query string for filtering logs (max 20,000 characters)',
+            },
+            start_time: {
+              type: 'string',
+              description: 'The start time of the time range (ISO 8601 format, e.g., "2023-11-07T05:31:56Z")',
+            },
+            end_time: {
+              type: 'string',
+              description: 'The end time of the time range (ISO 8601 format, e.g., "2023-11-07T05:31:56Z")',
+            },
+            page_size: {
+              type: 'number',
+              description: 'The maximum number of items per page (1-100, default varies)',
+            },
+            sort_order: {
+              type: 'string',
+              enum: ['asc', 'desc'],
+              description: 'The sort order of log entries: "asc" for chronological, "desc" for reverse chronological (default: "desc")',
+            },
+          },
+          required: ['query', 'start_time', 'end_time'],
         },
       },
       required: ['organization_name', 'query'],
@@ -1423,14 +1448,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       case 'query_log_entries': {
         const result = await saladClient.queryLogEntries(
           args.organization_name as string,
-          args.query as {
-            container_group_name?: string;
-            instance_id?: string;
-            start_time?: string;
-            end_time?: string;
-            level?: string;
-            limit?: number;
-          }
+          args.query as LogEntryQuery
         );
         return {
           content: [

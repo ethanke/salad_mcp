@@ -176,12 +176,33 @@ export interface WebhookSecretKey {
 }
 
 export interface LogEntry {
-  timestamp: string;
-  level: string;
-  message: string;
-  container_group_name?: string;
-  instance_id?: string;
-  [key: string]: unknown;
+  json_log?: Record<string, unknown>;
+  parent_span_id?: string;
+  receive_time: string;
+  resource: {
+    labels: Record<string, string>;
+    type: string;
+  };
+  severity: 'default' | 'debug' | 'info' | 'notice' | 'warning' | 'error' | 'critical' | 'alert' | 'emergency';
+  span_Id?: string;
+  text_log?: string;
+  time: string;
+  trace_Id?: string;
+}
+
+export interface LogEntryQuery {
+  query: string;
+  start_time: string;
+  end_time: string;
+  page_size?: number;
+  sort_order?: 'asc' | 'desc';
+}
+
+export interface LogEntryCollection {
+  items: LogEntry[];
+  organization_name: string;
+  page_max_time: string;
+  page_min_time: string;
 }
 
 export interface AvailabilityRequest {
@@ -751,15 +772,8 @@ export class SaladClient {
   // Log Entries
   async queryLogEntries(
     organizationName: string,
-    query: {
-      container_group_name?: string;
-      instance_id?: string;
-      start_time?: string;
-      end_time?: string;
-      level?: string;
-      limit?: number;
-    }
-  ): Promise<{ items: LogEntry[] }> {
+    query: LogEntryQuery
+  ): Promise<LogEntryCollection> {
     try {
       const response = await this.client.post(
         `/organizations/${organizationName}/log-entries`,
