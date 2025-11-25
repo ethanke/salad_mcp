@@ -49,6 +49,14 @@ class GPUCommunityTestRunner {
     this.testQueueName = `test-queue-${Date.now()}`;
   }
 
+  private logApiCall(method: string, input: any, output: any): void {
+    console.log('  📤 API Call:');
+    console.log(`     Method: ${method}`);
+    console.log(`     Input: ${JSON.stringify(input, null, 2).split('\n').map(line => '       ' + line).join('\n').trim()}`);
+    console.log('  📥 API Response:');
+    console.log(`     Output: ${JSON.stringify(output, null, 2).split('\n').map(line => '       ' + line).join('\n').trim()}`);
+  }
+
   private getTestCases(): TestCase[] {
     return [
       // GPU Availability & Classes Tests
@@ -59,7 +67,9 @@ class GPUCommunityTestRunner {
         category: 'GPU Discovery',
         test: async () => {
           try {
+            const input = { orgName: this.orgName };
             const response = await this.client.listGpuClasses(this.orgName);
+            this.logApiCall('listGpuClasses', input, response);
 
             // Handle case where response or items might be undefined
             if (!response || !response.items) {
@@ -96,7 +106,9 @@ class GPUCommunityTestRunner {
         category: 'GPU Discovery',
         test: async () => {
           try {
+            const input = { orgName: this.orgName };
             const availability = await this.client.getGpuAvailability(this.orgName);
+            this.logApiCall('getGpuAvailability', input, availability);
             console.log(`  GPU availability data retrieved successfully`);
 
             if (!availability || typeof availability !== 'object') {
@@ -118,7 +130,9 @@ class GPUCommunityTestRunner {
         category: 'System Discovery',
         test: async () => {
           try {
+            const input = { orgName: this.orgName };
             const availability = await this.client.getCpuAvailability(this.orgName);
+            this.logApiCall('getCpuAvailability', input, availability);
             console.log(`  CPU availability data retrieved successfully`);
           } catch (error: any) {
             if (error.statusCode === 401 || error.statusCode === 403 || error.statusCode === 404) {
@@ -138,7 +152,9 @@ class GPUCommunityTestRunner {
         category: 'Organization',
         test: async () => {
           try {
+            const input = { orgName: this.orgName };
             const quotas = await this.client.getQuotas(this.orgName);
+            this.logApiCall('getQuotas', input, quotas);
             console.log(`  Quotas retrieved successfully`);
           } catch (error: any) {
             // In test environments, 401/403/404 errors are acceptable
@@ -159,31 +175,38 @@ class GPUCommunityTestRunner {
         category: 'Container Groups - GPU',
         test: async () => {
           try {
+            const containerGroupData = {
+              name: this.testContainerGroupName,
+              display_name: 'GPU Community Test Container',
+              container: {
+                image: 'nvidia/cuda:12.0.0-base-ubuntu22.04',
+                resources: {
+                  cpu: 4,
+                  memory: 8192,
+                  gpu_classes: ['rtx4060', 'rtx4070', 'rtx3060']
+                },
+                command: ['sleep', '3600'],
+                environment_variables: {
+                  'TEST_MODE': 'true',
+                  'GPU_ENABLED': 'true'
+                }
+              },
+              replicas: 1,
+              autostart_policy: false,
+              restart_policy: 'never' as const,
+              country_codes: ['us', 'ca']
+            };
+            const input = {
+              orgName: this.orgName,
+              projectName: this.projectName,
+              containerGroup: containerGroupData
+            };
             const containerGroup = await this.client.createContainerGroup(
               this.orgName,
               this.projectName,
-              {
-                name: this.testContainerGroupName,
-                display_name: 'GPU Community Test Container',
-                container: {
-                  image: 'nvidia/cuda:12.0.0-base-ubuntu22.04',
-                  resources: {
-                    cpu: 4,
-                    memory: 8192,
-                    gpu_classes: ['rtx4060', 'rtx4070', 'rtx3060'] // Cheap GPUs for testing
-                  },
-                  command: ['sleep', '3600'],
-                  environment_variables: {
-                    'TEST_MODE': 'true',
-                    'GPU_ENABLED': 'true'
-                  }
-                },
-                replicas: 1,
-                autostart_policy: false,
-                restart_policy: 'never',
-                country_codes: ['us', 'ca'] // Community mode available regions
-              }
+              containerGroupData
             );
+            this.logApiCall('createContainerGroup', input, containerGroup);
             console.log(`  Container group created: ${containerGroup.name || this.testContainerGroupName}`);
           } catch (error: any) {
             if (error.statusCode === 401 || error.statusCode === 403 || error.statusCode === 404 || error.statusCode === 409) {
@@ -201,7 +224,9 @@ class GPUCommunityTestRunner {
         category: 'Container Groups',
         test: async () => {
           try {
+            const input = { orgName: this.orgName, projectName: this.projectName };
             const response = await this.client.listContainerGroups(this.orgName, this.projectName);
+            this.logApiCall('listContainerGroups', input, response);
             console.log(`  Found ${response.items?.length || 0} container groups`);
           } catch (error: any) {
             if (error.statusCode === 401 || error.statusCode === 403 || error.statusCode === 404) {
@@ -219,11 +244,13 @@ class GPUCommunityTestRunner {
         category: 'Container Groups',
         test: async () => {
           try {
+            const input = { orgName: this.orgName, projectName: this.projectName, containerGroupName: this.testContainerGroupName };
             const group = await this.client.getContainerGroup(
               this.orgName,
               this.projectName,
               this.testContainerGroupName
             );
+            this.logApiCall('getContainerGroup', input, group);
             console.log(`  Retrieved container group details`);
           } catch (error: any) {
             if (error.statusCode === 401 || error.statusCode === 403 || error.statusCode === 404) {
@@ -241,11 +268,13 @@ class GPUCommunityTestRunner {
         category: 'Container Groups - GPU',
         test: async () => {
           try {
-            await this.client.startContainerGroup(
+            const input = { orgName: this.orgName, projectName: this.projectName, containerGroupName: this.testContainerGroupName };
+            const response = await this.client.startContainerGroup(
               this.orgName,
               this.projectName,
               this.testContainerGroupName
             );
+            this.logApiCall('startContainerGroup', input, response);
             console.log(`  Container group started successfully`);
 
             // Wait a bit for startup
@@ -266,11 +295,13 @@ class GPUCommunityTestRunner {
         category: 'Container Instances - GPU',
         test: async () => {
           try {
+            const input = { orgName: this.orgName, projectName: this.projectName, containerGroupName: this.testContainerGroupName };
             const response = await this.client.listContainerGroupInstances(
               this.orgName,
               this.projectName,
               this.testContainerGroupName
             );
+            this.logApiCall('listContainerGroupInstances', input, response);
             console.log(`  Found ${response.items?.length || 0} running instances`);
           } catch (error: any) {
             if (error.statusCode === 401 || error.statusCode === 403 || error.statusCode === 404) {
@@ -288,19 +319,23 @@ class GPUCommunityTestRunner {
         category: 'Container Instances - GPU',
         test: async () => {
           try {
+            const input1 = { orgName: this.orgName, projectName: this.projectName, containerGroupName: this.testContainerGroupName };
             const response = await this.client.listContainerGroupInstances(
               this.orgName,
               this.projectName,
               this.testContainerGroupName
             );
+            this.logApiCall('listContainerGroupInstances', input1, response);
 
             if (response.items && response.items.length > 0) {
+              const input2 = { orgName: this.orgName, projectName: this.projectName, containerGroupName: this.testContainerGroupName, instanceId: response.items[0].id };
               const instance = await this.client.getContainerGroupInstance(
                 this.orgName,
                 this.projectName,
                 this.testContainerGroupName,
                 response.items[0].id
               );
+              this.logApiCall('getContainerGroupInstance', input2, instance);
               console.log(`  Retrieved instance details`);
             } else {
               console.log(`  No instances available to query`);
@@ -321,28 +356,31 @@ class GPUCommunityTestRunner {
         category: 'Container Groups - GPU',
         test: async () => {
           try {
-            await this.client.updateContainerGroup(
+            const updateData = {
+              display_name: 'Updated GPU Test Container',
+              replicas: 2,
+              container: {
+                image: 'nvidia/cuda:12.0.0-base-ubuntu22.04',
+                resources: {
+                  cpu: 4,
+                  memory: 8192,
+                  gpu_classes: ['rtx4060', 'rtx3060']
+                },
+                environment_variables: {
+                  'TEST_MODE': 'true',
+                  'GPU_ENABLED': 'true',
+                  'UPDATED': 'true'
+                }
+              }
+            };
+            const input = { orgName: this.orgName, projectName: this.projectName, containerGroupName: this.testContainerGroupName, updateData };
+            const response = await this.client.updateContainerGroup(
               this.orgName,
               this.projectName,
               this.testContainerGroupName,
-              {
-                display_name: 'Updated GPU Test Container',
-                replicas: 2,
-                container: {
-                  image: 'nvidia/cuda:12.0.0-base-ubuntu22.04',
-                  resources: {
-                    cpu: 4,
-                    memory: 8192,
-                    gpu_classes: ['rtx4060', 'rtx3060']
-                  },
-                  environment_variables: {
-                    'TEST_MODE': 'true',
-                    'GPU_ENABLED': 'true',
-                    'UPDATED': 'true'
-                  }
-                }
-              }
+              updateData
             );
+            this.logApiCall('updateContainerGroup', input, response);
             console.log(`  Container group updated successfully`);
           } catch (error: any) {
             if (error.statusCode === 401 || error.statusCode === 403 || error.statusCode === 404) {
@@ -360,19 +398,23 @@ class GPUCommunityTestRunner {
         category: 'Container Instances - GPU',
         test: async () => {
           try {
+            const input1 = { orgName: this.orgName, projectName: this.projectName, containerGroupName: this.testContainerGroupName };
             const response = await this.client.listContainerGroupInstances(
               this.orgName,
               this.projectName,
               this.testContainerGroupName
             );
+            this.logApiCall('listContainerGroupInstances', input1, response);
 
             if (response.items && response.items.length > 0) {
-              await this.client.restartContainerGroupInstance(
+              const input2 = { orgName: this.orgName, projectName: this.projectName, containerGroupName: this.testContainerGroupName, instanceId: response.items[0].id };
+              const restartResponse = await this.client.restartContainerGroupInstance(
                 this.orgName,
                 this.projectName,
                 this.testContainerGroupName,
                 response.items[0].id
               );
+              this.logApiCall('restartContainerGroupInstance', input2, restartResponse);
               console.log(`  Instance restarted successfully`);
             } else {
               console.log(`  No instances available to restart`);
@@ -393,19 +435,23 @@ class GPUCommunityTestRunner {
         category: 'Container Instances - GPU',
         test: async () => {
           try {
+            const input1 = { orgName: this.orgName, projectName: this.projectName, containerGroupName: this.testContainerGroupName };
             const response = await this.client.listContainerGroupInstances(
               this.orgName,
               this.projectName,
               this.testContainerGroupName
             );
+            this.logApiCall('listContainerGroupInstances', input1, response);
 
             if (response.items && response.items.length > 0) {
-              await this.client.reallocateContainerGroupInstance(
+              const input2 = { orgName: this.orgName, projectName: this.projectName, containerGroupName: this.testContainerGroupName, instanceId: response.items[0].id };
+              const reallocateResponse = await this.client.reallocateContainerGroupInstance(
                 this.orgName,
                 this.projectName,
                 this.testContainerGroupName,
                 response.items[0].id
               );
+              this.logApiCall('reallocateContainerGroupInstance', input2, reallocateResponse);
               console.log(`  Instance reallocated successfully`);
             } else {
               console.log(`  No instances available to reallocate`);
@@ -426,19 +472,23 @@ class GPUCommunityTestRunner {
         category: 'Container Instances - GPU',
         test: async () => {
           try {
+            const input1 = { orgName: this.orgName, projectName: this.projectName, containerGroupName: this.testContainerGroupName };
             const response = await this.client.listContainerGroupInstances(
               this.orgName,
               this.projectName,
               this.testContainerGroupName
             );
+            this.logApiCall('listContainerGroupInstances', input1, response);
 
             if (response.items && response.items.length > 0) {
-              await this.client.recreateContainerGroupInstance(
+              const input2 = { orgName: this.orgName, projectName: this.projectName, containerGroupName: this.testContainerGroupName, instanceId: response.items[0].id };
+              const recreateResponse = await this.client.recreateContainerGroupInstance(
                 this.orgName,
                 this.projectName,
                 this.testContainerGroupName,
                 response.items[0].id
               );
+              this.logApiCall('recreateContainerGroupInstance', input2, recreateResponse);
               console.log(`  Instance recreated successfully`);
             } else {
               console.log(`  No instances available to recreate`);
@@ -459,11 +509,13 @@ class GPUCommunityTestRunner {
         category: 'Container Groups - GPU',
         test: async () => {
           try {
-            await this.client.stopContainerGroup(
+            const input = { orgName: this.orgName, projectName: this.projectName, containerGroupName: this.testContainerGroupName };
+            const response = await this.client.stopContainerGroup(
               this.orgName,
               this.projectName,
               this.testContainerGroupName
             );
+            this.logApiCall('stopContainerGroup', input, response);
             console.log(`  Container group stopped successfully`);
 
             // Wait a bit for shutdown
@@ -486,15 +538,18 @@ class GPUCommunityTestRunner {
         category: 'Queues',
         test: async () => {
           try {
-            await this.client.createQueue(
+            const queueData = {
+              name: this.testQueueName,
+              display_name: 'GPU Test Queue',
+              description: 'Queue for GPU workload testing'
+            };
+            const input = { orgName: this.orgName, projectName: this.projectName, queueData };
+            const response = await this.client.createQueue(
               this.orgName,
               this.projectName,
-              {
-                name: this.testQueueName,
-                display_name: 'GPU Test Queue',
-                description: 'Queue for GPU workload testing'
-              }
+              queueData
             );
+            this.logApiCall('createQueue', input, response);
             console.log(`  Queue created successfully`);
           } catch (error: any) {
             if (error.statusCode === 401 || error.statusCode === 403 || error.statusCode === 404 || error.statusCode === 409) {
@@ -512,7 +567,9 @@ class GPUCommunityTestRunner {
         category: 'Queues',
         test: async () => {
           try {
+            const input = { orgName: this.orgName, projectName: this.projectName };
             const response = await this.client.listQueues(this.orgName, this.projectName);
+            this.logApiCall('listQueues', input, response);
             console.log(`  Found ${response.items?.length || 0} queues`);
           } catch (error: any) {
             if (error.statusCode === 401 || error.statusCode === 403 || error.statusCode === 404) {
@@ -530,11 +587,13 @@ class GPUCommunityTestRunner {
         category: 'Queues',
         test: async () => {
           try {
+            const input = { orgName: this.orgName, projectName: this.projectName, queueName: this.testQueueName };
             const queue = await this.client.getQueue(
               this.orgName,
               this.projectName,
               this.testQueueName
             );
+            this.logApiCall('getQueue', input, queue);
             console.log(`  Retrieved queue details`);
           } catch (error: any) {
             if (error.statusCode === 401 || error.statusCode === 403 || error.statusCode === 404) {
@@ -552,15 +611,18 @@ class GPUCommunityTestRunner {
         category: 'Queues',
         test: async () => {
           try {
-            await this.client.updateQueue(
+            const updateData = {
+              display_name: 'Updated GPU Test Queue',
+              description: 'Updated queue for GPU workload testing'
+            };
+            const input = { orgName: this.orgName, projectName: this.projectName, queueName: this.testQueueName, updateData };
+            const response = await this.client.updateQueue(
               this.orgName,
               this.projectName,
               this.testQueueName,
-              {
-                display_name: 'Updated GPU Test Queue',
-                description: 'Updated queue for GPU workload testing'
-              }
+              updateData
             );
+            this.logApiCall('updateQueue', input, response);
             console.log(`  Queue updated successfully`);
           } catch (error: any) {
             if (error.statusCode === 401 || error.statusCode === 403 || error.statusCode === 404) {
@@ -578,25 +640,28 @@ class GPUCommunityTestRunner {
         category: 'Queue Jobs',
         test: async () => {
           try {
-            await this.client.createQueueJob(
+            const jobData = {
+              input: {
+                task: 'gpu_benchmark',
+                parameters: {
+                  duration: 60,
+                  workload: 'light'
+                }
+              },
+              metadata: {
+                test_id: `test-${Date.now()}`,
+                environment: 'ci'
+              },
+              webhook: process.env.TEST_WEBHOOK_URL
+            };
+            const input = { orgName: this.orgName, projectName: this.projectName, queueName: this.testQueueName, jobData };
+            const response = await this.client.createQueueJob(
               this.orgName,
               this.projectName,
               this.testQueueName,
-              {
-                input: {
-                  task: 'gpu_benchmark',
-                  parameters: {
-                    duration: 60,
-                    workload: 'light'
-                  }
-                },
-                metadata: {
-                  test_id: `test-${Date.now()}`,
-                  environment: 'ci'
-                },
-                webhook: process.env.TEST_WEBHOOK_URL
-              }
+              jobData
             );
+            this.logApiCall('createQueueJob', input, response);
             console.log(`  Queue job created successfully`);
           } catch (error: any) {
             if (error.statusCode === 401 || error.statusCode === 403 || error.statusCode === 404) {
@@ -614,11 +679,13 @@ class GPUCommunityTestRunner {
         category: 'Queue Jobs',
         test: async () => {
           try {
+            const input = { orgName: this.orgName, projectName: this.projectName, queueName: this.testQueueName };
             const response = await this.client.listQueueJobs(
               this.orgName,
               this.projectName,
               this.testQueueName
             );
+            this.logApiCall('listQueueJobs', input, response);
             console.log(`  Found ${response.items?.length || 0} queue jobs`);
           } catch (error: any) {
             if (error.statusCode === 401 || error.statusCode === 403 || error.statusCode === 404) {
@@ -636,19 +703,23 @@ class GPUCommunityTestRunner {
         category: 'Queue Jobs',
         test: async () => {
           try {
+            const input1 = { orgName: this.orgName, projectName: this.projectName, queueName: this.testQueueName };
             const response = await this.client.listQueueJobs(
               this.orgName,
               this.projectName,
               this.testQueueName
             );
+            this.logApiCall('listQueueJobs', input1, response);
 
             if (response.items && response.items.length > 0) {
+              const input2 = { orgName: this.orgName, projectName: this.projectName, queueName: this.testQueueName, jobId: response.items[0].id };
               const job = await this.client.getQueueJob(
                 this.orgName,
                 this.projectName,
                 this.testQueueName,
                 response.items[0].id
               );
+              this.logApiCall('getQueueJob', input2, job);
               console.log(`  Retrieved queue job details`);
             } else {
               console.log(`  No jobs available to query`);
@@ -669,19 +740,23 @@ class GPUCommunityTestRunner {
         category: 'Queue Jobs',
         test: async () => {
           try {
+            const input1 = { orgName: this.orgName, projectName: this.projectName, queueName: this.testQueueName };
             const response = await this.client.listQueueJobs(
               this.orgName,
               this.projectName,
               this.testQueueName
             );
+            this.logApiCall('listQueueJobs', input1, response);
 
             if (response.items && response.items.length > 0) {
-              await this.client.deleteQueueJob(
+              const input2 = { orgName: this.orgName, projectName: this.projectName, queueName: this.testQueueName, jobId: response.items[0].id };
+              const deleteResponse = await this.client.deleteQueueJob(
                 this.orgName,
                 this.projectName,
                 this.testQueueName,
                 response.items[0].id
               );
+              this.logApiCall('deleteQueueJob', input2, deleteResponse);
               console.log(`  Queue job deleted successfully`);
             } else {
               console.log(`  No jobs available to delete`);
@@ -704,9 +779,11 @@ class GPUCommunityTestRunner {
         category: 'Inference Endpoints',
         test: async () => {
           try {
+            const input = { orgName: this.orgName };
             const response = await this.client.listInferenceEndpoints(
               this.orgName
             );
+            this.logApiCall('listInferenceEndpoints', input, response);
             console.log(`  Found ${response.items?.length || 0} inference endpoints`);
           } catch (error: any) {
             if (error.statusCode === 401 || error.statusCode === 403 || error.statusCode === 404) {
@@ -724,15 +801,19 @@ class GPUCommunityTestRunner {
         category: 'Inference Endpoints',
         test: async () => {
           try {
+            const input1 = { orgName: this.orgName };
             const response = await this.client.listInferenceEndpoints(
               this.orgName
             );
+            this.logApiCall('listInferenceEndpoints', input1, response);
 
             if (response.items && response.items.length > 0) {
+              const input2 = { orgName: this.orgName, endpointName: response.items[0].name };
               const endpoint = await this.client.getInferenceEndpoint(
                 this.orgName,
                 response.items[0].name
               );
+              this.logApiCall('getInferenceEndpoint', input2, endpoint);
               console.log(`  Retrieved inference endpoint details`);
             } else {
               console.log(`  No endpoints available to query`);
@@ -753,25 +834,30 @@ class GPUCommunityTestRunner {
         category: 'Inference Jobs',
         test: async () => {
           try {
+            const input1 = { orgName: this.orgName };
             const response = await this.client.listInferenceEndpoints(
               this.orgName
             );
+            this.logApiCall('listInferenceEndpoints', input1, response);
 
             if (response.items && response.items.length > 0) {
-              await this.client.createInferenceEndpointJob(
+              const jobData = {
+                input: {
+                  prompt: 'Test inference job',
+                  max_tokens: 100
+                },
+                metadata: {
+                  test_id: `inference-test-${Date.now()}`
+                },
+                webhook: process.env.TEST_WEBHOOK_URL
+              };
+              const input2 = { orgName: this.orgName, endpointName: response.items[0].name, jobData };
+              const jobResponse = await this.client.createInferenceEndpointJob(
                 this.orgName,
                 response.items[0].name,
-                {
-                  input: {
-                    prompt: 'Test inference job',
-                    max_tokens: 100
-                  },
-                  metadata: {
-                    test_id: `inference-test-${Date.now()}`
-                  },
-                  webhook: process.env.TEST_WEBHOOK_URL
-                }
+                jobData
               );
+              this.logApiCall('createInferenceEndpointJob', input2, jobResponse);
               console.log(`  Inference job created successfully`);
             } else {
               console.log(`  No endpoints available to create jobs`);
@@ -792,15 +878,19 @@ class GPUCommunityTestRunner {
         category: 'Inference Jobs',
         test: async () => {
           try {
+            const input1 = { orgName: this.orgName };
             const response = await this.client.listInferenceEndpoints(
               this.orgName
             );
+            this.logApiCall('listInferenceEndpoints', input1, response);
 
             if (response.items && response.items.length > 0) {
+              const input2 = { orgName: this.orgName, endpointName: response.items[0].name };
               const jobsResponse = await this.client.listInferenceEndpointJobs(
                 this.orgName,
                 response.items[0].name
               );
+              this.logApiCall('listInferenceEndpointJobs', input2, jobsResponse);
               console.log(`  Found ${jobsResponse.items?.length || 0} inference jobs`);
             } else {
               console.log(`  No endpoints available to list jobs`);
@@ -821,22 +911,28 @@ class GPUCommunityTestRunner {
         category: 'Inference Jobs',
         test: async () => {
           try {
+            const input1 = { orgName: this.orgName };
             const response = await this.client.listInferenceEndpoints(
               this.orgName
             );
+            this.logApiCall('listInferenceEndpoints', input1, response);
 
             if (response.items && response.items.length > 0) {
+              const input2 = { orgName: this.orgName, endpointName: response.items[0].name };
               const jobsResponse = await this.client.listInferenceEndpointJobs(
                 this.orgName,
                 response.items[0].name
               );
+              this.logApiCall('listInferenceEndpointJobs', input2, jobsResponse);
 
               if (jobsResponse.items && jobsResponse.items.length > 0) {
+                const input3 = { orgName: this.orgName, endpointName: response.items[0].name, jobId: jobsResponse.items[0].id };
                 const job = await this.client.getInferenceEndpointJob(
                   this.orgName,
                   response.items[0].name,
                   jobsResponse.items[0].id
                 );
+                this.logApiCall('getInferenceEndpointJob', input3, job);
                 console.log(`  Retrieved inference job details`);
               } else {
                 console.log(`  No jobs available to query`);
@@ -860,22 +956,28 @@ class GPUCommunityTestRunner {
         category: 'Inference Jobs',
         test: async () => {
           try {
+            const input1 = { orgName: this.orgName };
             const response = await this.client.listInferenceEndpoints(
               this.orgName
             );
+            this.logApiCall('listInferenceEndpoints', input1, response);
 
             if (response.items && response.items.length > 0) {
+              const input2 = { orgName: this.orgName, endpointName: response.items[0].name };
               const jobsResponse = await this.client.listInferenceEndpointJobs(
                 this.orgName,
                 response.items[0].name
               );
+              this.logApiCall('listInferenceEndpointJobs', input2, jobsResponse);
 
               if (jobsResponse.items && jobsResponse.items.length > 0) {
-                await this.client.deleteInferenceEndpointJob(
+                const input3 = { orgName: this.orgName, endpointName: response.items[0].name, jobId: jobsResponse.items[0].id };
+                const deleteResponse = await this.client.deleteInferenceEndpointJob(
                   this.orgName,
                   response.items[0].name,
                   jobsResponse.items[0].id
                 );
+                this.logApiCall('deleteInferenceEndpointJob', input3, deleteResponse);
                 console.log(`  Inference job deleted successfully`);
               } else {
                 console.log(`  No jobs available to delete`);
@@ -901,14 +1003,17 @@ class GPUCommunityTestRunner {
         category: 'Logging',
         test: async () => {
           try {
+            const queryParams = {
+              query: `container_group_name:"${this.testContainerGroupName}" severity:info`,
+              start_time: new Date(Date.now() - 3600000).toISOString(),
+              end_time: new Date().toISOString()
+            };
+            const input = { orgName: this.orgName, queryParams };
             const logs = await this.client.queryLogEntries(
               this.orgName,
-              {
-                query: `container_group_name:"${this.testContainerGroupName}" severity:info`,
-                start_time: new Date(Date.now() - 3600000).toISOString(), // Last hour
-                end_time: new Date().toISOString()
-              }
+              queryParams
             );
+            this.logApiCall('queryLogEntries', input, logs);
             console.log(`  Retrieved log entries successfully`);
           } catch (error: any) {
             if (error.statusCode === 401 || error.statusCode === 403 || error.statusCode === 404) {
@@ -926,11 +1031,13 @@ class GPUCommunityTestRunner {
         category: 'Logging',
         test: async () => {
           try {
+            const input = { orgName: this.orgName, projectName: this.projectName, containerGroupName: this.testContainerGroupName };
             const logs = await this.client.getSystemLogs(
               this.orgName,
               this.projectName,
               this.testContainerGroupName
             );
+            this.logApiCall('getSystemLogs', input, logs);
             console.log(`  System logs retrieved successfully`);
           } catch (error: any) {
             if (error.statusCode === 401 || error.statusCode === 403 || error.statusCode === 404) {
@@ -950,9 +1057,11 @@ class GPUCommunityTestRunner {
         category: 'Webhooks',
         test: async () => {
           try {
+            const input = { orgName: this.orgName };
             const secret = await this.client.getWebhookSecretKey(
               this.orgName
             );
+            this.logApiCall('getWebhookSecretKey', input, secret);
             console.log(`  Webhook secret key retrieved successfully`);
           } catch (error: any) {
             if (error.statusCode === 401 || error.statusCode === 403 || error.statusCode === 404) {
@@ -970,9 +1079,11 @@ class GPUCommunityTestRunner {
         category: 'Webhooks',
         test: async () => {
           try {
-            await this.client.updateWebhookSecretKey(
+            const input = { orgName: this.orgName };
+            const response = await this.client.updateWebhookSecretKey(
               this.orgName
             );
+            this.logApiCall('updateWebhookSecretKey', input, response);
             console.log(`  Webhook secret key updated successfully`);
           } catch (error: any) {
             if (error.statusCode === 401 || error.statusCode === 403 || error.statusCode === 404) {
@@ -992,11 +1103,13 @@ class GPUCommunityTestRunner {
         category: 'Cleanup',
         test: async () => {
           try {
-            await this.client.deleteContainerGroup(
+            const input = { orgName: this.orgName, projectName: this.projectName, containerGroupName: this.testContainerGroupName };
+            const response = await this.client.deleteContainerGroup(
               this.orgName,
               this.projectName,
               this.testContainerGroupName
             );
+            this.logApiCall('deleteContainerGroup', input, response);
             console.log(`  Container group deleted successfully`);
           } catch (error: any) {
             if (error.statusCode === 401 || error.statusCode === 403 || error.statusCode === 404) {
@@ -1014,11 +1127,13 @@ class GPUCommunityTestRunner {
         category: 'Cleanup',
         test: async () => {
           try {
-            await this.client.deleteQueue(
+            const input = { orgName: this.orgName, projectName: this.projectName, queueName: this.testQueueName };
+            const response = await this.client.deleteQueue(
               this.orgName,
               this.projectName,
               this.testQueueName
             );
+            this.logApiCall('deleteQueue', input, response);
             console.log(`  Queue deleted successfully`);
           } catch (error: any) {
             if (error.statusCode === 401 || error.statusCode === 403 || error.statusCode === 404) {
@@ -1038,10 +1153,14 @@ class GPUCommunityTestRunner {
         category: 'Error Handling',
         test: async () => {
           try {
-            await this.client.getQuotas('invalid-org-name-that-does-not-exist');
+            const input = { orgName: 'invalid-org-name-that-does-not-exist' };
+            const response = await this.client.getQuotas('invalid-org-name-that-does-not-exist');
+            this.logApiCall('getQuotas', input, response);
             throw new Error('Expected error was not thrown');
           } catch (error: any) {
             if (error.statusCode === 401 || error.statusCode === 403 || error.statusCode === 404) {
+              const input = { orgName: 'invalid-org-name-that-does-not-exist' };
+              this.logApiCall('getQuotas', input, { error: error.message, statusCode: error.statusCode });
               console.log(`  Correctly handled invalid organization error`);
               return;
             }
