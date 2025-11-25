@@ -27,6 +27,7 @@ class GPUCommunityTestRunner {
   private testContainerGroupName: string;
   private testQueueName: string;
   private testResults: EvaluationResult[] = [];
+  private claudeModelId: string;
 
   constructor() {
     const apiKey = process.env.SALAD_API_KEY;
@@ -41,6 +42,7 @@ class GPUCommunityTestRunner {
 
     this.client = new SaladClient({ apiKey });
     this.anthropic = new Anthropic({ apiKey: claudeApiKey });
+    this.claudeModelId = process.env.CLAUDE_MODEL_ID || 'claude-haiku-4-5-20251001';
     this.orgName = process.env.SALAD_TEST_ORG || 'test-org';
     this.projectName = process.env.SALAD_TEST_PROJECT || 'test-project';
     this.testContainerGroupName = `test-gpu-${Date.now()}`;
@@ -902,10 +904,9 @@ class GPUCommunityTestRunner {
             const logs = await this.client.queryLogEntries(
               this.orgName,
               {
-                container_group_name: this.testContainerGroupName,
+                query: `container_group_name:"${this.testContainerGroupName}" severity:info`,
                 start_time: new Date(Date.now() - 3600000).toISOString(), // Last hour
-                end_time: new Date().toISOString(),
-                level: 'info'
+                end_time: new Date().toISOString()
               }
             );
             console.log(`  Retrieved log entries successfully`);
@@ -1111,7 +1112,7 @@ Focus on:
 - Quality and comprehensiveness of the test suite`;
 
     const message = await this.anthropic.messages.create({
-      model: 'claude-3-5-sonnet-20240620',
+      model: this.claudeModelId,
       max_tokens: 2000,
       messages: [{
         role: 'user',

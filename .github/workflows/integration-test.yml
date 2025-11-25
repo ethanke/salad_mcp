@@ -30,12 +30,17 @@ jobs:
       - name: Run integration tests
         env:
           SALAD_API_KEY: ${{ secrets.SALAD_API_KEY }}
+          SALAD_TEST_ORG: ${{ secrets.SALAD_ORG_ID != '' && secrets.SALAD_ORG_ID || 'test-org' }}
+          SALAD_TEST_PROJECT: ${{ secrets.SALAD_ORG_PROJECT != '' && secrets.SALAD_ORG_PROJECT || 'test-project' }}
         run: npm test
 
       - name: Run auto-eval with LLM judge
         env:
           SALAD_API_KEY: ${{ secrets.SALAD_API_KEY }}
           CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
+          CLAUDE_MODEL_ID: ${{ secrets.CLAUDE_MODEL_ID != '' && secrets.CLAUDE_MODEL_ID || 'claude-haiku-4-5-20251001' }}
+          SALAD_TEST_ORG: ${{ secrets.SALAD_ORG_ID != '' && secrets.SALAD_ORG_ID || 'test-org' }}
+          SALAD_TEST_PROJECT: ${{ secrets.SALAD_ORG_PROJECT != '' && secrets.SALAD_ORG_PROJECT || 'test-project' }}
         run: npm run eval
 
   gpu-tests:
@@ -62,6 +67,7 @@ jobs:
         env:
           SALAD_API_KEY: ${{ secrets.SALAD_API_KEY }}
           CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
-          SALAD_TEST_ORG: ${{ secrets.SALAD_TEST_ORG != '' && secrets.SALAD_TEST_ORG || 'test-org' }}
-          SALAD_TEST_PROJECT: ${{ secrets.SALAD_TEST_PROJECT != '' && secrets.SALAD_TEST_PROJECT || 'test-project' }}
+          CLAUDE_MODEL_ID: ${{ secrets.CLAUDE_MODEL_ID != '' && secrets.CLAUDE_MODEL_ID || 'claude-haiku-4-5-20251001' }}
+          SALAD_TEST_ORG: ${{ secrets.SALAD_ORG_ID != '' && secrets.SALAD_ORG_ID || 'test-org' }}
+          SALAD_TEST_PROJECT: ${{ secrets.SALAD_ORG_PROJECT != '' && secrets.SALAD_ORG_PROJECT || 'test-project' }}
         run: npm run test:gpu

@@ -5,6 +5,7 @@ import { SaladClient } from './salad-client.js';
 
 const CLAUDE_API_KEY = process.env.CLAUDE_API_KEY;
 const SALAD_API_KEY = process.env.SALAD_API_KEY;
+const CLAUDE_MODEL_ID = process.env.CLAUDE_MODEL_ID || 'claude-haiku-4-5-20251001';
 
 if (!CLAUDE_API_KEY) {
   console.error('Error: CLAUDE_API_KEY environment variable is required');
@@ -83,7 +84,7 @@ class AutoEvaluator {
       .join('\n');
 
     const message = await anthropic.messages.create({
-      model: 'claude-3-5-sonnet-20240620',
+      model: CLAUDE_MODEL_ID,
       max_tokens: 2000,
       messages: [
         {
@@ -282,7 +283,7 @@ Format your response clearly with these sections.`,
         critical: true,
         test: async () => {
           const message = await anthropic.messages.create({
-            model: 'claude-3-5-sonnet-20240620',
+            model: CLAUDE_MODEL_ID,
             max_tokens: 100,
             messages: [
               {
