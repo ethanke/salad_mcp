@@ -15,6 +15,23 @@ This MCP server provides seamless integration with SaladCloud's API, enabling Cl
 
 ## Installation
 
+### Quick Start (Recommended)
+
+Use npx to run without installation:
+
+```bash
+npx salad-mcp-server
+```
+
+### From npm
+
+```bash
+npm install -g salad-mcp-server
+salad-mcp-server
+```
+
+### From Source
+
 ```bash
 npm install
 npm run build
@@ -39,6 +56,24 @@ export CLAUDE_API_KEY=your_claude_api_key_here
 ### As MCP Server
 
 Add to your MCP client configuration (e.g., Claude Desktop):
+
+**Using npx (recommended):**
+
+```json
+{
+  "mcpServers": {
+    "salad": {
+      "command": "npx",
+      "args": ["salad-mcp-server"],
+      "env": {
+        "SALAD_API_KEY": "your_api_key_here"
+      }
+    }
+  }
+}
+```
+
+**Using local installation:**
 
 ```json
 {
