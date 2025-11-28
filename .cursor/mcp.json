@@ -1,0 +1,12 @@
+
+{
+    "mcpServers": {
+        "salad_mcp": {
+            "command": "npx",
+            "args": ["salad-mcp-server"],
+            "env": {
+                "SALAD_API_KEY": "salad_cloud_user_Wo6cSPZw5hNRpGeVrDjARGPM7XvSybjTBs7QwGOr3en1EVXmP"
+            }
+        }
+    }
+}

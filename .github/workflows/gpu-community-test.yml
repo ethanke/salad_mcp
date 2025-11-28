@@ -1,0 +1,51 @@
+name: GPU Community Tests
+
+on:
+  push:
+    branches: [main, master, claude/**]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+  schedule:
+    # Run daily at 2 AM UTC to catch any API changes
+    - cron: '0 2 * * *'
+
+jobs:
+  gpu-community-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build project
+        run: npm run build
+
+      - name: Run comprehensive GPU community tests
+        env:
+          SALAD_API_KEY: ${{ secrets.SALAD_API_KEY }}
+          CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
+          CLAUDE_MODEL_ID: ${{ secrets.CLAUDE_MODEL_ID != '' && secrets.CLAUDE_MODEL_ID || 'claude-haiku-4-5-20251001' }}
+          SALAD_TEST_ORG: ${{ secrets.SALAD_ORG_ID != '' && secrets.SALAD_ORG_ID || 'test-org' }}
+          SALAD_TEST_PROJECT: ${{ secrets.SALAD_ORG_PROJECT != '' && secrets.SALAD_ORG_PROJECT || 'test-project' }}
+        run: npm run test:gpu
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gpu-test-results
+          path: |
+            *.log
+            test-results/
+          retention-days: 7
