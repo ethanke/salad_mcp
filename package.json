@@ -5,7 +5,7 @@
   "type": "module",
   "main": "dist/index.js",
   "bin": {
-    "salad-mcp": "./dist/index.js"
+    "salad-mcp": "dist/index.js"
   },
   "scripts": {
     "build": "tsc",
@@ -27,7 +27,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/ethanke/salad_mcp.git"
+    "url": "git+https://github.com/ethanke/salad_mcp.git"
   },
   "bugs": {
     "url": "https://github.com/ethanke/salad_mcp/issues"
