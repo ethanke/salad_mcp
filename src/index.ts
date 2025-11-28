@@ -21,20 +21,7 @@ import {
   LogEntryCollection,
 } from './salad-client.js';
 import { z } from 'zod';
-
-const SALAD_API_KEY = process.env.SALAD_API_KEY || 'placeholder-key';
-const SALAD_ORG_NAME = process.env.SALAD_ORG_NAME || 'placeholder-org';
-
-// Warn but don't exit if keys are missing (allows discovery tools to run)
-if (!process.env.SALAD_API_KEY) {
-  console.error('Warning: SALAD_API_KEY environment variable is not set. API calls will fail.');
-}
-
-if (!process.env.SALAD_ORG_NAME) {
-  console.error('Warning: SALAD_ORG_NAME environment variable is not set. API calls will fail.');
-}
-
-const saladClient = new SaladClient({ apiKey: SALAD_API_KEY });
+import { fileURLToPath } from 'url';
 
 // Define tools
 const TOOLS: Tool[] = [
@@ -739,638 +726,650 @@ const TOOLS: Tool[] = [
   },
 ];
 
-// Create server
-const server = new Server(
-  {
-    name: 'salad-mcp-server',
-    version: '1.0.0',
-  },
-  {
-    capabilities: {
-      tools: {},
+export default function createServer() {
+  const SALAD_API_KEY = process.env.SALAD_API_KEY || 'placeholder-key';
+  const SALAD_ORG_NAME = process.env.SALAD_ORG_NAME || 'placeholder-org';
+
+  // Warn but don't exit if keys are missing (allows discovery tools to run)
+  if (!process.env.SALAD_API_KEY) {
+    console.error('Warning: SALAD_API_KEY environment variable is not set. API calls will fail.');
+  }
+
+  if (!process.env.SALAD_ORG_NAME) {
+    console.error('Warning: SALAD_ORG_NAME environment variable is not set. API calls will fail.');
+  }
+
+  const saladClient = new SaladClient({ apiKey: SALAD_API_KEY });
+
+  // Create server
+  const server = new Server(
+    {
+      name: 'salad-mcp-server',
+      version: '1.0.0',
     },
-  }
-);
-
-// Handle list tools
-server.setRequestHandler(ListToolsRequestSchema, async () => {
-  return { tools: TOOLS };
-});
-
-// Handle tool calls
-server.setRequestHandler(CallToolRequestSchema, async (request) => {
-  const { name, arguments: args } = request.params;
-
-  if (!args) {
-    return {
-      content: [
-        {
-          type: 'text',
-          text: 'Error: Missing arguments',
-        },
-      ],
-      isError: true,
-    };
-  }
-
-  try {
-    switch (name) {
-      case 'list_container_groups': {
-        const result = await saladClient.listContainerGroups(
-          SALAD_ORG_NAME,
-          args.project_name as string
-        );
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(result, null, 2),
-            },
-          ],
-        };
-      }
-
-      case 'get_container_group': {
-        const result = await saladClient.getContainerGroup(
-          SALAD_ORG_NAME,
-          args.project_name as string,
-          args.container_group_name as string
-        );
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(result, null, 2),
-            },
-          ],
-        };
-      }
-
-      case 'create_container_group': {
-        const result = await saladClient.createContainerGroup(
-          SALAD_ORG_NAME,
-          args.project_name as string,
-          args.container_group as ContainerGroup
-        );
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(result, null, 2),
-            },
-          ],
-        };
-      }
-
-      case 'update_container_group': {
-        const result = await saladClient.updateContainerGroup(
-          SALAD_ORG_NAME,
-          args.project_name as string,
-          args.container_group_name as string,
-          args.updates as Partial<ContainerGroup>
-        );
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(result, null, 2),
-            },
-          ],
-        };
-      }
-
-      case 'start_container_group': {
-        await saladClient.startContainerGroup(
-          SALAD_ORG_NAME,
-          args.project_name as string,
-          args.container_group_name as string
-        );
-        return {
-          content: [
-            {
-              type: 'text',
-              text: `Container group ${args.container_group_name} started successfully`,
-            },
-          ],
-        };
-      }
-
-      case 'stop_container_group': {
-        await saladClient.stopContainerGroup(
-          SALAD_ORG_NAME,
-          args.project_name as string,
-          args.container_group_name as string
-        );
-        return {
-          content: [
-            {
-              type: 'text',
-              text: `Container group ${args.container_group_name} stopped successfully`,
-            },
-          ],
-        };
-      }
-
-      case 'delete_container_group': {
-        await saladClient.deleteContainerGroup(
-          SALAD_ORG_NAME,
-          args.project_name as string,
-          args.container_group_name as string
-        );
-        return {
-          content: [
-            {
-              type: 'text',
-              text: `Container group ${args.container_group_name} deleted successfully`,
-            },
-          ],
-        };
-      }
-
-      case 'list_inference_endpoints': {
-        const result = await saladClient.listInferenceEndpoints(
-          SALAD_ORG_NAME
-        );
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(result, null, 2),
-            },
-          ],
-        };
-      }
-
-      case 'get_inference_endpoint': {
-        const result = await saladClient.getInferenceEndpoint(
-          SALAD_ORG_NAME,
-          args.inference_endpoint_name as string
-        );
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(result, null, 2),
-            },
-          ],
-        };
-      }
-
-      case 'list_queues': {
-        const result = await saladClient.listQueues(
-          SALAD_ORG_NAME,
-          args.project_name as string
-        );
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(result, null, 2),
-            },
-          ],
-        };
-      }
-
-      case 'get_queue': {
-        const result = await saladClient.getQueue(
-          SALAD_ORG_NAME,
-          args.project_name as string,
-          args.queue_name as string
-        );
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(result, null, 2),
-            },
-          ],
-        };
-      }
-
-      case 'create_queue': {
-        const result = await saladClient.createQueue(
-          SALAD_ORG_NAME,
-          args.project_name as string,
-          args.queue as Queue
-        );
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(result, null, 2),
-            },
-          ],
-        };
-      }
-
-      case 'delete_queue': {
-        await saladClient.deleteQueue(
-          SALAD_ORG_NAME,
-          args.project_name as string,
-          args.queue_name as string
-        );
-        return {
-          content: [
-            {
-              type: 'text',
-              text: `Queue ${args.queue_name} deleted successfully`,
-            },
-          ],
-        };
-      }
-
-      case 'get_quotas': {
-        const result = await saladClient.getQuotas(
-          SALAD_ORG_NAME
-        );
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(result, null, 2),
-            },
-          ],
-        };
-      }
-
-      case 'get_system_logs': {
-        const result = await saladClient.getSystemLogs(
-          SALAD_ORG_NAME,
-          args.project_name as string,
-          args.container_group_name as string
-        );
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(result, null, 2),
-            },
-          ],
-        };
-      }
-
-      case 'list_container_group_instances': {
-        const result = await saladClient.listContainerGroupInstances(
-          SALAD_ORG_NAME,
-          args.project_name as string,
-          args.container_group_name as string
-        );
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(result, null, 2),
-            },
-          ],
-        };
-      }
-
-      case 'get_container_group_instance': {
-        const result = await saladClient.getContainerGroupInstance(
-          SALAD_ORG_NAME,
-          args.project_name as string,
-          args.container_group_name as string,
-          args.instance_id as string
-        );
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(result, null, 2),
-            },
-          ],
-        };
-      }
-
-      case 'update_container_group_instance': {
-        const result = await saladClient.updateContainerGroupInstance(
-          SALAD_ORG_NAME,
-          args.project_name as string,
-          args.container_group_name as string,
-          args.instance_id as string,
-          args.updates as Partial<ContainerGroupInstance>
-        );
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(result, null, 2),
-            },
-          ],
-        };
-      }
-
-      case 'reallocate_container_group_instance': {
-        await saladClient.reallocateContainerGroupInstance(
-          SALAD_ORG_NAME,
-          args.project_name as string,
-          args.container_group_name as string,
-          args.instance_id as string
-        );
-        return {
-          content: [
-            {
-              type: 'text',
-              text: `Container group instance ${args.instance_id} reallocated successfully`,
-            },
-          ],
-        };
-      }
-
-      case 'recreate_container_group_instance': {
-        await saladClient.recreateContainerGroupInstance(
-          SALAD_ORG_NAME,
-          args.project_name as string,
-          args.container_group_name as string,
-          args.instance_id as string
-        );
-        return {
-          content: [
-            {
-              type: 'text',
-              text: `Container group instance ${args.instance_id} recreated successfully`,
-            },
-          ],
-        };
-      }
-
-      case 'restart_container_group_instance': {
-        await saladClient.restartContainerGroupInstance(
-          SALAD_ORG_NAME,
-          args.project_name as string,
-          args.container_group_name as string,
-          args.instance_id as string
-        );
-        return {
-          content: [
-            {
-              type: 'text',
-              text: `Container group instance ${args.instance_id} restarted successfully`,
-            },
-          ],
-        };
-      }
-
-      case 'update_queue': {
-        const result = await saladClient.updateQueue(
-          SALAD_ORG_NAME,
-          args.project_name as string,
-          args.queue_name as string,
-          args.updates as Partial<Queue>
-        );
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(result, null, 2),
-            },
-          ],
-        };
-      }
-
-      case 'list_queue_jobs': {
-        const result = await saladClient.listQueueJobs(
-          SALAD_ORG_NAME,
-          args.project_name as string,
-          args.queue_name as string
-        );
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(result, null, 2),
-            },
-          ],
-        };
-      }
-
-      case 'create_queue_job': {
-        const result = await saladClient.createQueueJob(
-          SALAD_ORG_NAME,
-          args.project_name as string,
-          args.queue_name as string,
-          args.job as { input: unknown; metadata?: Record<string, unknown>; webhook?: string }
-        );
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(result, null, 2),
-            },
-          ],
-        };
-      }
-
-      case 'get_queue_job': {
-        const result = await saladClient.getQueueJob(
-          SALAD_ORG_NAME,
-          args.project_name as string,
-          args.queue_name as string,
-          args.job_id as string
-        );
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(result, null, 2),
-            },
-          ],
-        };
-      }
-
-      case 'delete_queue_job': {
-        await saladClient.deleteQueueJob(
-          SALAD_ORG_NAME,
-          args.project_name as string,
-          args.queue_name as string,
-          args.job_id as string
-        );
-        return {
-          content: [
-            {
-              type: 'text',
-              text: `Queue job ${args.job_id} deleted successfully`,
-            },
-          ],
-        };
-      }
-
-      case 'list_inference_endpoint_jobs': {
-        const result = await saladClient.listInferenceEndpointJobs(
-          SALAD_ORG_NAME,
-          args.inference_endpoint_name as string
-        );
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(result, null, 2),
-            },
-          ],
-        };
-      }
-
-      case 'create_inference_endpoint_job': {
-        const result = await saladClient.createInferenceEndpointJob(
-          SALAD_ORG_NAME,
-          args.inference_endpoint_name as string,
-          args.job as { input: unknown; metadata?: Record<string, unknown>; webhook?: string }
-        );
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(result, null, 2),
-            },
-          ],
-        };
-      }
-
-      case 'get_inference_endpoint_job': {
-        const result = await saladClient.getInferenceEndpointJob(
-          SALAD_ORG_NAME,
-          args.inference_endpoint_name as string,
-          args.job_id as string
-        );
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(result, null, 2),
-            },
-          ],
-        };
-      }
-
-      case 'delete_inference_endpoint_job': {
-        await saladClient.deleteInferenceEndpointJob(
-          SALAD_ORG_NAME,
-          args.inference_endpoint_name as string,
-          args.job_id as string
-        );
-        return {
-          content: [
-            {
-              type: 'text',
-              text: `Inference endpoint job ${args.job_id} deleted successfully`,
-            },
-          ],
-        };
-      }
-
-      case 'list_gpu_classes': {
-        const result = await saladClient.listGpuClasses(
-          SALAD_ORG_NAME
-        );
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(result, null, 2),
-            },
-          ],
-        };
-      }
-
-      case 'get_webhook_secret_key': {
-        const result = await saladClient.getWebhookSecretKey(
-          SALAD_ORG_NAME
-        );
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(result, null, 2),
-            },
-          ],
-        };
-      }
-
-      case 'update_webhook_secret_key': {
-        const result = await saladClient.updateWebhookSecretKey(
-          SALAD_ORG_NAME
-        );
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(result, null, 2),
-            },
-          ],
-        };
-      }
-
-      case 'query_log_entries': {
-        const result = await saladClient.queryLogEntries(
-          SALAD_ORG_NAME,
-          args.query as LogEntryQuery
-        );
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(result, null, 2),
-            },
-          ],
-        };
-      }
-
-      case 'get_cpu_availability': {
-        const result = await saladClient.getCpuAvailability(
-          SALAD_ORG_NAME,
-          args.request as { gpu_classes?: string[]; quantity?: number } | undefined
-        );
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(result, null, 2),
-            },
-          ],
-        };
-      }
-
-      case 'get_gpu_availability': {
-        const result = await saladClient.getGpuAvailability(
-          SALAD_ORG_NAME,
-          args.request as { gpu_classes?: string[]; quantity?: number } | undefined
-        );
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(result, null, 2),
-            },
-          ],
-        };
-      }
-
-      default:
-        throw new Error(`Unknown tool: ${name}`);
+    {
+      capabilities: {
+        tools: {},
+      },
     }
-  } catch (error) {
-    const errorMessage =
-      error instanceof Error ? error.message : String(error);
-    return {
-      content: [
-        {
-          type: 'text',
-          text: `Error: ${errorMessage}`,
-        },
-      ],
-      isError: true,
-    };
-  }
-});
+  );
 
-// Start server
-async function main() {
-  const transport = new StdioServerTransport();
-  await server.connect(transport);
-  console.error('Salad MCP Server running on stdio');
+  // Handle list tools
+  server.setRequestHandler(ListToolsRequestSchema, async () => {
+    return { tools: TOOLS };
+  });
+
+  // Handle tool calls
+  server.setRequestHandler(CallToolRequestSchema, async (request) => {
+    const { name, arguments: args } = request.params;
+
+    if (!args) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: 'Error: Missing arguments',
+          },
+        ],
+        isError: true,
+      };
+    }
+
+    try {
+      switch (name) {
+        case 'list_container_groups': {
+          const result = await saladClient.listContainerGroups(
+            SALAD_ORG_NAME,
+            args.project_name as string
+          );
+          return {
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify(result, null, 2),
+              },
+            ],
+          };
+        }
+
+        case 'get_container_group': {
+          const result = await saladClient.getContainerGroup(
+            SALAD_ORG_NAME,
+            args.project_name as string,
+            args.container_group_name as string
+          );
+          return {
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify(result, null, 2),
+              },
+            ],
+          };
+        }
+
+        case 'create_container_group': {
+          const result = await saladClient.createContainerGroup(
+            SALAD_ORG_NAME,
+            args.project_name as string,
+            args.container_group as ContainerGroup
+          );
+          return {
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify(result, null, 2),
+              },
+            ],
+          };
+        }
+
+        case 'update_container_group': {
+          const result = await saladClient.updateContainerGroup(
+            SALAD_ORG_NAME,
+            args.project_name as string,
+            args.container_group_name as string,
+            args.updates as Partial<ContainerGroup>
+          );
+          return {
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify(result, null, 2),
+              },
+            ],
+          };
+        }
+
+        case 'start_container_group': {
+          await saladClient.startContainerGroup(
+            SALAD_ORG_NAME,
+            args.project_name as string,
+            args.container_group_name as string
+          );
+          return {
+            content: [
+              {
+                type: 'text',
+                text: `Container group ${args.container_group_name} started successfully`,
+              },
+            ],
+          };
+        }
+
+        case 'stop_container_group': {
+          await saladClient.stopContainerGroup(
+            SALAD_ORG_NAME,
+            args.project_name as string,
+            args.container_group_name as string
+          );
+          return {
+            content: [
+              {
+                type: 'text',
+                text: `Container group ${args.container_group_name} stopped successfully`,
+              },
+            ],
+          };
+        }
+
+        case 'delete_container_group': {
+          await saladClient.deleteContainerGroup(
+            SALAD_ORG_NAME,
+            args.project_name as string,
+            args.container_group_name as string
+          );
+          return {
+            content: [
+              {
+                type: 'text',
+                text: `Container group ${args.container_group_name} deleted successfully`,
+              },
+            ],
+          };
+        }
+
+        case 'list_inference_endpoints': {
+          const result = await saladClient.listInferenceEndpoints(SALAD_ORG_NAME);
+          return {
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify(result, null, 2),
+              },
+            ],
+          };
+        }
+
+        case 'get_inference_endpoint': {
+          const result = await saladClient.getInferenceEndpoint(
+            SALAD_ORG_NAME,
+            args.inference_endpoint_name as string
+          );
+          return {
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify(result, null, 2),
+              },
+            ],
+          };
+        }
+
+        case 'list_queues': {
+          const result = await saladClient.listQueues(
+            SALAD_ORG_NAME,
+            args.project_name as string
+          );
+          return {
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify(result, null, 2),
+              },
+            ],
+          };
+        }
+
+        case 'get_queue': {
+          const result = await saladClient.getQueue(
+            SALAD_ORG_NAME,
+            args.project_name as string,
+            args.queue_name as string
+          );
+          return {
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify(result, null, 2),
+              },
+            ],
+          };
+        }
+
+        case 'create_queue': {
+          const result = await saladClient.createQueue(
+            SALAD_ORG_NAME,
+            args.project_name as string,
+            args.queue as Queue
+          );
+          return {
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify(result, null, 2),
+              },
+            ],
+          };
+        }
+
+        case 'delete_queue': {
+          await saladClient.deleteQueue(
+            SALAD_ORG_NAME,
+            args.project_name as string,
+            args.queue_name as string
+          );
+          return {
+            content: [
+              {
+                type: 'text',
+                text: `Queue ${args.queue_name} deleted successfully`,
+              },
+            ],
+          };
+        }
+
+        case 'get_quotas': {
+          const result = await saladClient.getQuotas(SALAD_ORG_NAME);
+          return {
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify(result, null, 2),
+              },
+            ],
+          };
+        }
+
+        case 'get_system_logs': {
+          const result = await saladClient.getSystemLogs(
+            SALAD_ORG_NAME,
+            args.project_name as string,
+            args.container_group_name as string
+          );
+          return {
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify(result, null, 2),
+              },
+            ],
+          };
+        }
+
+        case 'list_container_group_instances': {
+          const result = await saladClient.listContainerGroupInstances(
+            SALAD_ORG_NAME,
+            args.project_name as string,
+            args.container_group_name as string
+          );
+          return {
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify(result, null, 2),
+              },
+            ],
+          };
+        }
+
+        case 'get_container_group_instance': {
+          const result = await saladClient.getContainerGroupInstance(
+            SALAD_ORG_NAME,
+            args.project_name as string,
+            args.container_group_name as string,
+            args.instance_id as string
+          );
+          return {
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify(result, null, 2),
+              },
+            ],
+          };
+        }
+
+        case 'update_container_group_instance': {
+          await saladClient.updateContainerGroupInstance(
+            SALAD_ORG_NAME,
+            args.project_name as string,
+            args.container_group_name as string,
+            args.instance_id as string,
+            args.updates as Partial<ContainerGroupInstance>
+          );
+          return {
+            content: [
+              {
+                type: 'text',
+                text: `Instance ${args.instance_id} updated successfully`,
+              },
+            ],
+          };
+        }
+
+        case 'reallocate_container_group_instance': {
+          await saladClient.reallocateContainerGroupInstance(
+            SALAD_ORG_NAME,
+            args.project_name as string,
+            args.container_group_name as string,
+            args.instance_id as string
+          );
+          return {
+            content: [
+              {
+                type: 'text',
+                text: `Instance ${args.instance_id} reallocated successfully`,
+              },
+            ],
+          };
+        }
+
+        case 'recreate_container_group_instance': {
+          await saladClient.recreateContainerGroupInstance(
+            SALAD_ORG_NAME,
+            args.project_name as string,
+            args.container_group_name as string,
+            args.instance_id as string
+          );
+          return {
+            content: [
+              {
+                type: 'text',
+                text: `Instance ${args.instance_id} recreated successfully`,
+              },
+            ],
+          };
+        }
+
+        case 'restart_container_group_instance': {
+          await saladClient.restartContainerGroupInstance(
+            SALAD_ORG_NAME,
+            args.project_name as string,
+            args.container_group_name as string,
+            args.instance_id as string
+          );
+          return {
+            content: [
+              {
+                type: 'text',
+                text: `Instance ${args.instance_id} restarted successfully`,
+              },
+            ],
+          };
+        }
+
+        case 'update_queue': {
+          const result = await saladClient.updateQueue(
+            SALAD_ORG_NAME,
+            args.project_name as string,
+            args.queue_name as string,
+            args.updates as Partial<Queue>
+          );
+          return {
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify(result, null, 2),
+              },
+            ],
+          };
+        }
+
+        case 'list_queue_jobs': {
+          const result = await saladClient.listQueueJobs(
+            SALAD_ORG_NAME,
+            args.project_name as string,
+            args.queue_name as string
+          );
+          return {
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify(result, null, 2),
+              },
+            ],
+          };
+        }
+
+        case 'create_queue_job': {
+          const result = await saladClient.createQueueJob(
+            SALAD_ORG_NAME,
+            args.project_name as string,
+            args.queue_name as string,
+            args.job as QueueJob
+          );
+          return {
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify(result, null, 2),
+              },
+            ],
+          };
+        }
+
+        case 'get_queue_job': {
+          const result = await saladClient.getQueueJob(
+            SALAD_ORG_NAME,
+            args.project_name as string,
+            args.queue_name as string,
+            args.job_id as string
+          );
+          return {
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify(result, null, 2),
+              },
+            ],
+          };
+        }
+
+        case 'delete_queue_job': {
+          await saladClient.deleteQueueJob(
+            SALAD_ORG_NAME,
+            args.project_name as string,
+            args.queue_name as string,
+            args.job_id as string
+          );
+          return {
+            content: [
+              {
+                type: 'text',
+                text: `Job ${args.job_id} deleted successfully`,
+              },
+            ],
+          };
+        }
+
+        case 'list_inference_endpoint_jobs': {
+          const result = await saladClient.listInferenceEndpointJobs(
+            SALAD_ORG_NAME,
+            args.inference_endpoint_name as string
+          );
+          return {
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify(result, null, 2),
+              },
+            ],
+          };
+        }
+
+        case 'create_inference_endpoint_job': {
+          const result = await saladClient.createInferenceEndpointJob(
+            SALAD_ORG_NAME,
+            args.inference_endpoint_name as string,
+            args.job as InferenceEndpointJob
+          );
+          return {
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify(result, null, 2),
+              },
+            ],
+          };
+        }
+
+        case 'get_inference_endpoint_job': {
+          const result = await saladClient.getInferenceEndpointJob(
+            SALAD_ORG_NAME,
+            args.inference_endpoint_name as string,
+            args.job_id as string
+          );
+          return {
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify(result, null, 2),
+              },
+            ],
+          };
+        }
+
+        case 'delete_inference_endpoint_job': {
+          await saladClient.deleteInferenceEndpointJob(
+            SALAD_ORG_NAME,
+            args.inference_endpoint_name as string,
+            args.job_id as string
+          );
+          return {
+            content: [
+              {
+                type: 'text',
+                text: `Job ${args.job_id} deleted successfully`,
+              },
+            ],
+          };
+        }
+
+        case 'list_gpu_classes': {
+          const result = await saladClient.listGpuClasses(SALAD_ORG_NAME);
+          return {
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify(result, null, 2),
+              },
+            ],
+          };
+        }
+
+        case 'get_webhook_secret_key': {
+          const result = await saladClient.getWebhookSecretKey(SALAD_ORG_NAME);
+          return {
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify(result, null, 2),
+              },
+            ],
+          };
+        }
+
+        case 'update_webhook_secret_key': {
+          const result = await saladClient.updateWebhookSecretKey(SALAD_ORG_NAME);
+          return {
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify(result, null, 2),
+              },
+            ],
+          };
+        }
+
+        case 'query_log_entries': {
+          const result = await saladClient.queryLogEntries(
+            SALAD_ORG_NAME,
+            args.query as LogEntryQuery
+          );
+          return {
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify(result, null, 2),
+              },
+            ],
+          };
+        }
+
+        case 'get_cpu_availability': {
+          const result = await saladClient.getCpuAvailability(
+            SALAD_ORG_NAME,
+            args.request as any
+          );
+          return {
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify(result, null, 2),
+              },
+            ],
+          };
+        }
+
+        case 'get_gpu_availability': {
+          const result = await saladClient.getGpuAvailability(
+            SALAD_ORG_NAME,
+            args.request as any
+          );
+          return {
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify(result, null, 2),
+              },
+            ],
+          };
+        }
+
+        default:
+          return {
+            content: [
+              {
+                type: 'text',
+                text: `Unknown tool: ${name}`,
+              },
+            ],
+            isError: true,
+          };
+      }
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Error: ${error instanceof Error ? error.message : String(error)}`,
+          },
+        ],
+        isError: true,
+      };
+    }
+  });
+
+  return server;
 }
 
-main().catch((error) => {
-  console.error('Fatal error:', error);
-  process.exit(1);
-});
+// Run the server if this file is executed directly
+if (import.meta.url && process.argv[1] === fileURLToPath(import.meta.url)) {
+  const server = createServer();
+  const transport = new StdioServerTransport();
+  server.connect(transport).catch((error) => {
+    console.error('Server error:', error);
+    process.exit(1);
+  });
+}
