@@ -1,0 +1,15 @@
+startCommand:
+  type: stdio
+  config:
+    command: "node"
+    args: ["dist/index.js"]
+  environmentVariables:
+    SALAD_API_KEY:
+      description: "Your SaladCloud API Key"
+      required: true
+    SALAD_ORG_NAME:
+      description: "Your SaladCloud Organization Name"
+      required: true
+    SALAD_PROJECT_NAME:
+      description: "Your SaladCloud Project Name"
+      required: true
