@@ -1,6 +1,7 @@
 # Salad MCP Server
 
 [![npm version](https://badge.fury.io/js/salad-mcp-server.svg)](https://www.npmjs.com/package/salad-mcp-server)
+[![smithery badge](https://smithery.ai/badge/@ethanke/salad_mcp)](https://smithery.ai/server/@ethanke/salad_mcp)
 [![smithery badge](https://smithery.ai/badge/salad-mcp-server)](https://smithery.ai/server/salad-mcp-server)
 
 A Model Context Protocol (MCP) server for [SaladCloud](https://salad.com) - the GPU provider with super nice features!
