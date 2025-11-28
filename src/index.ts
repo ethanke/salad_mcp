@@ -22,17 +22,16 @@ import {
 } from './salad-client.js';
 import { z } from 'zod';
 
-const SALAD_API_KEY = process.env.SALAD_API_KEY;
-const SALAD_ORG_NAME = process.env.SALAD_ORG_NAME;
+const SALAD_API_KEY = process.env.SALAD_API_KEY || 'placeholder-key';
+const SALAD_ORG_NAME = process.env.SALAD_ORG_NAME || 'placeholder-org';
 
-if (!SALAD_API_KEY) {
-  console.error('Error: SALAD_API_KEY environment variable is required');
-  process.exit(1);
+// Warn but don't exit if keys are missing (allows discovery tools to run)
+if (!process.env.SALAD_API_KEY) {
+  console.error('Warning: SALAD_API_KEY environment variable is not set. API calls will fail.');
 }
 
-if (!SALAD_ORG_NAME) {
-  console.error('Error: SALAD_ORG_NAME environment variable is required');
-  process.exit(1);
+if (!process.env.SALAD_ORG_NAME) {
+  console.error('Warning: SALAD_ORG_NAME environment variable is not set. API calls will fail.');
 }
 
 const saladClient = new SaladClient({ apiKey: SALAD_API_KEY });
