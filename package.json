@@ -9,8 +9,8 @@
     "salad-mcp": "dist/index.js"
   },
   "scripts": {
-    "build": "smithery build",
-    "dev": "smithery dev",
+    "build": "tsc",
+    "dev": "tsc --watch",
     "start": "node dist/index.js",
     "eval": "node dist/eval-cli.js",
     "test": "node dist/integration-test.js",
